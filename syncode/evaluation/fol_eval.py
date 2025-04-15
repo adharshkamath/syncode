@@ -4,7 +4,7 @@ Adapted from https://github.com/teacherpeterpan/Logic-LLM. Use Prover9 to solve 
 import random
 import re
 from typing import Optional
-from mxeval.data import write_jsonl
+from syncode.evaluation.mxeval_evaluation import write_jsonl
 from tqdm import tqdm
 import signal
 from syncode.parsers import create_base_parser
@@ -98,7 +98,7 @@ class FOLEval:
         for task_id, problem in enumerate(problems):
             results[task_id] = []
             full_prompt = FOLEval._prompt_folio(problem)
-            completion = syncode.model.generate_batch_completion_grammar(
+            completion = syncode.model.generate_grammar_constrained_completion(
                 full_prompt, 
                 syncode.num_samples,
                 stop_words=['\n\n', '------']

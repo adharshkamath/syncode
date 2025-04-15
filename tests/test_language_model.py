@@ -38,7 +38,8 @@ class TestTokenizer:
     def __init__(self) -> None:
         vocab = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '-', '*', '/', '(', ')', ' ', '\n', '\t', '=']
         self.vocab = vocab
-        self.eos_token_id = ''
+        self.eos_token_id = 1
+        self.pad_token_id = 2
 
     def __call__(self, input_batch: list[str], return_tensors="pt") -> BatchEncoding:
         # This works since we have single character tokens
@@ -55,40 +56,17 @@ class TestTokenizer:
         return {v: i for i, v in enumerate(self.vocab)}
 
 class TestHuggingFaceModel(unittest.TestCase):
-    def test_generate_batch_completion_grammar(self):
-        torch.manual_seed(0)
-        model = TestModel()
-        tokenizer = TestTokenizer()
-        logger = common.EmptyLogger()
-        lm = HuggingFaceModel(model, Grammar('calc'), tokenizer, mode='original', max_new_tokens=15, device='cpu')
-        prompt = "113 + 235 + 17"
-        output = lm.generate_batch_completion_grammar(prompt, 1)
-        self.assertEqual(len(output[0]), 15, "The output length does not match the expected value.")
-    
-    def test_generate_batch_completion_grammar2(self):
-        torch.manual_seed(0)
-        model = TestModel()
-        tokenizer = TestTokenizer()
-        logger = common.EmptyLogger()
-        lm = HuggingFaceModel(model, Grammar('calc'), tokenizer, mode='original', max_new_tokens=15, device='cpu')
-        prompt = "113 + 235 + 17"
-        output = lm.generate_batch_completion_grammar(prompt, 2)
-        self.assertEqual(len(output[0]), 15, "The output length does not match the expected value.")
-        self.assertEqual(len(output[1]), 15, "The output length does not match the expected value.")
-    
-    @unittest.skip("Only for local testing")
     def test_stop_word(self):
         torch.manual_seed(0)
-        syncode = Syncode(model="microsoft/phi-2", mode='original')
+        syncode = Syncode(model="microsoft/phi-2", mode='original', device='cpu')
         prompt = "Generate a json for the country nigeria.\n```json\n"
         stop_words = ["```"]
         output = syncode.infer(prompt, stop_words=stop_words)[0]
         assert output.endswith('```')
 
-    @unittest.skip("Only for local testing")
     def test_stop_word2(self):
         torch.manual_seed(0)
-        syncode = Syncode(model="microsoft/phi-2", mode='original')
+        syncode = Syncode(model="microsoft/phi-2", mode='original', device='cpu')
         prompt = "def add(a, b):\n"
         stop_words = ["\n\n"]
         output = syncode.infer(prompt, stop_words=stop_words)[0]

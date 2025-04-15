@@ -1,4 +1,6 @@
+import logging
 import os
+import sys
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
@@ -8,34 +10,34 @@ HF_CACHE = os.environ['HF_CACHE'] if 'HF_CACHE' in os.environ else 'cache/'
 SYNCODE_CACHE = os.environ['SYNCODE_CACHE'] if 'SYNCODE_CACHE' in os.environ else 'cache/'
 HF_ACCESS_TOKEN = os.environ['HF_ACCESS_TOKEN'] if 'HF_ACCESS_TOKEN' in os.environ else None
 
-def get_vocab_from_tokenizer(tokenizer):
-    # self.vocab is a list of readable token strings (e.g., ' hello' and '\n')
-    # sorted by their token IDs (so self.vocab[0] is the first token, etc).
-    vocab = [v for k, v in
-                    sorted([(t_id, tokenizer.decode([t_id]))
-                            for _, t_id in tokenizer.get_vocab().items()])]
 
-    # HACK: Is there a better way to know if a token has a prefix space?
-    if 'Llama' in tokenizer.__class__.__name__:
-        for i in range(len(vocab)):
-            t = vocab[i]
-            if 2*len(t) != len(tokenizer.decode([i, i], add_special_tokens=False)):
-                vocab[i] = ' ' + t
-            if t == '':
-                vocab[i] = ' '
-    
-    return vocab
+def load_model(model_name, device, quantize, device_map = None):
+        torch_dtype = torch.bfloat16 if quantize else "auto"
+        device_map = device_map if device_map is not None else "auto"
 
-def load_model(model_name, device, quantize):
+        attn_implementation = None
+        if "gemma-3" in model_name:
+            # This is due to the gemma-3 issue with SDPA implementation
+            # https://github.com/google-deepmind/gemma/issues/169
+            attn_implementation = "eager"
+            logging.info("Using slower \"eager\" attention implementation for gemma-3 due to issue with SDPA implementation")
+
         if model_name == 'test':
             model = AutoModelForCausalLM.from_pretrained('bigcode/tiny_starcoder_py').to(device)
         elif model_name == 'test-instruct':
             model = AutoModelForCausalLM.from_pretrained("rahuldshetty/tiny-starcoder-instruct")
         else:
-            if (quantize):
-                model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16, cache_dir=HF_CACHE, token=HF_ACCESS_TOKEN, trust_remote_code=True).eval().to(device)
-            else:
-                model = AutoModelForCausalLM.from_pretrained(model_name, cache_dir=HF_CACHE, token=HF_ACCESS_TOKEN, trust_remote_code=True).eval().to(device)
+            if device_map is not None:
+                logging.info(f"Loading model {model_name} with device:{device}, device_map:{device_map}, torch_dtype:{torch_dtype}")
+                model = AutoModelForCausalLM.from_pretrained(
+                    model_name, 
+                    torch_dtype=torch_dtype, 
+                    cache_dir=HF_CACHE, 
+                    token=HF_ACCESS_TOKEN, 
+                    trust_remote_code=True, 
+                    device_map = device_map,
+                    attn_implementation=attn_implementation
+                    ).eval()
         return model
 
 def load_tokenizer(model_name):
@@ -44,7 +46,12 @@ def load_tokenizer(model_name):
         elif model_name == 'test-instruct':
             tokenizer = AutoTokenizer.from_pretrained("rahuldshetty/tiny-starcoder-instruct")
         else:
-            tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=HF_CACHE, token=HF_ACCESS_TOKEN, trust_remote_code=True)
+            tokenizer = AutoTokenizer.from_pretrained(
+                model_name, 
+                cache_dir=HF_CACHE, 
+                token=HF_ACCESS_TOKEN, 
+                trust_remote_code=True
+                )
         return tokenizer
 
 def get_output_path(model_name, grammar, dataset, num_samples, mode):
@@ -52,6 +59,46 @@ def get_output_path(model_name, grammar, dataset, num_samples, mode):
         out_path = out_dir + 'samples_' + str(num_samples) + '_mode_' + str(mode) + "_eval.jsonl"
         os.makedirs(out_dir, exist_ok=True)
         return out_dir,out_path
+
+# This is the setup for Python logging
+def setup_logging(level=None):
+    """
+    Configure the root logger for both application and test usage.
+    
+    This function is safe to call multiple times - it will only configure
+    logging once to avoid duplicate handlers.
+    
+    Args:
+        level: Override the logging level. If None, uses the LOG_LEVEL 
+               environment variable or defaults to INFO.
+    
+    Returns:
+        The root logger
+    """ 
+    # Determine the logging level
+    if level is None:
+        # Get level from environment or default to INFO
+        level_name = os.environ.get('LOG_LEVEL', 'INFO')
+        level = getattr(logging, level_name.upper(), logging.INFO)
+    
+    # Get the root logger
+    root_logger = logging.getLogger()
+    
+    # Clear any existing handlers to avoid duplicates
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+    
+    # Set the logging level
+    root_logger.setLevel(level)
+    
+    # Create a stdout handler
+    handler = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter('[%(asctime)s-%(name)s] - %(message)s')
+    handler.setFormatter(formatter)
+    root_logger.addHandler(handler)
+        
+    return root_logger
+
 
 class Logger:
     """

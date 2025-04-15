@@ -3,7 +3,7 @@ from typing import Optional
 from tqdm import tqdm
 from syncode import common
 from syncode.evaluation.mxeval_evaluation import compute_pass_at_k
-from mxeval.data import write_jsonl
+from syncode.evaluation.mxeval_evaluation import write_jsonl
 
 
 class MathEval:
@@ -22,7 +22,7 @@ class MathEval:
 
         for task_id, problem in enumerate(problems):
             results[task_id] = []
-            batch_completions = syncode.model.generate_batch_completion_grammar(
+            batch_completions = syncode.model.generate_grammar_constrained_completion(
                 problem['question'], 
                 syncode.num_samples
                 )

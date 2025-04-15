@@ -5,12 +5,15 @@ from syncode.larkm.parsers.lalr_interactive_parser import InteractiveParser
 from syncode.parse_result import ParseResult, RemainderState
 from syncode.larkm.lexer import Token
 from typing import Optional, Any, Tuple, Iterable
+import logging
+logger = logging.getLogger(__name__)
+
 
 class IncrementalParser:    
     """
     This is the base class for all incremental parsers.
     """
-    def __init__(self, base_parser, logger: Optional[common.Logger]=None, ignore_whitespace=False) -> None:
+    def __init__(self, base_parser, ignore_whitespace=False) -> None:
         self.cur_pos = 0 # Current cursor position in the lexer tokens list
         self.lexer_pos = 0 # Current lexer position in the code
         self.dedent_queue: list = []
@@ -19,7 +22,6 @@ class IncrementalParser:
         # Initialize the parser
         self.base_parser = base_parser
 
-        self.logger = logger if logger is not None else common.EmptyLogger()
         self.interactive = self.base_parser.parse_interactive('')
         self.parsed_lexer_tokens: list = []
 
@@ -55,7 +57,14 @@ class IncrementalParser:
         key = self._get_hash(lexer_tokens[:pos+1])
 
         # parser_state, cur_ac_terminals, next_ac_terminals, indent_levels, dedent_queue
-        self.cur_pos_to_parser_state[key] = (copy.deepcopy(self.parsed_lexer_tokens), parser_state, cur_ac_terminals, next_ac_terminals, indent_levels, copy.deepcopy(self.dedent_queue))
+        self.cur_pos_to_parser_state[key] = (
+            copy.deepcopy(self.parsed_lexer_tokens), 
+            parser_state.copy(), 
+            cur_ac_terminals, 
+            next_ac_terminals, 
+            indent_levels, 
+            copy.deepcopy(self.dedent_queue)
+        )
         
         self.cur_ac_terminals = copy.deepcopy(cur_ac_terminals)
         self.next_ac_terminals = copy.deepcopy(next_ac_terminals)
@@ -149,12 +158,12 @@ class IncrementalParser:
                 self._store_parser_state(
                     self.cur_pos-1,
                     lexer_tokens, 
-                    interactive.parser_state.copy(), 
+                    interactive.parser_state, 
                     self._accepts(interactive))
 
         except lark.exceptions.UnexpectedToken as e:
             parse_incomplete = True
-            self._handle_parsing_error(lexer_tokens, token)
+            self._handle_parsing_error(lexer_tokens, token, e)
 
         # Compute current terminal string
         remainder_state, current_term_str, final_terminal = self._get_remainder(partial_code, lexing_incomplete=lexing_incomplete, parse_incomplete=parse_incomplete)            
@@ -175,10 +184,12 @@ class IncrementalParser:
                 remainder_state = RemainderState.INCOMPLETE
                 self.cur_ac_terminals = self.next_ac_terminals
                 self.next_ac_terminals = set()
+
         elif parse_incomplete: # Parsing is incomplete
             remainder_state = RemainderState.INCOMPLETE
             current_term_str = self.parsed_lexer_tokens[-1].value
             final_terminal = self.parsed_lexer_tokens[-1].type
+            
         elif len(self.parsed_lexer_tokens) > 0:
             if self.lexer_pos < len(code): # In this case the final lexical tokens are ignored by the parser
                 remainder_state = RemainderState.COMPLETE
@@ -199,14 +210,14 @@ class IncrementalParser:
         accepts = interactive_parser.accepts()
         return accepts
     
-    def _handle_parsing_error(self, lexer_tokens, token):
+    def _handle_parsing_error(self, lexer_tokens, token, error):
         """
         Handles the error that occurs when the lexer token is not parsed correctly.
         1. If the final token is not parsed correctly, then it is okay.
         2. If a non-final token is not parsed correctly, then it is an issue. We log the warning in that case. 
         """
         if token != lexer_tokens[-1]:
-            self.logger.log_error(f'Error in parsing the token: {token} which is not the last token in the lexer_tokens: {lexer_tokens}')
+            raise error
         else:
             # If it is the final token that gave the error, then it is okay
             self.cur_ac_terminals = self.next_ac_terminals

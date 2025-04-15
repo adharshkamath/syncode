@@ -1,9 +1,9 @@
+accelerate
 fire
 interegular
-regex==2023.8.8
+regex==2024.11.6
 torch
 tqdm
-transformers==4.44.0
-mxeval @ git+https://github.com/shubhamugare/mxeval.git
+transformers==4.51.3; python_version < "3.13"
 datasets
 jsonschema

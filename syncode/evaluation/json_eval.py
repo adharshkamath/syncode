@@ -1,6 +1,6 @@
 from tqdm import tqdm
 from typing import Optional
-from mxeval.data import write_jsonl
+from syncode.evaluation.mxeval.data import write_jsonl
 import ast
 import json
 from jsonschema import validate, ValidationError
@@ -18,7 +18,8 @@ class JSONEval:
         out_path: Optional[str], 
         debug_task_id: Optional[int] = None,
         logger=common.EmptyLogger(),
-        prompt_type='original'
+        prompt_type='original',
+        num_tasks=None
         ):
         problems = syncode.dataset.problems
         if syncode.grammar_decoder is not None:
@@ -27,6 +28,9 @@ class JSONEval:
 
         if debug_task_id is not None:
             problems = [problems[debug_task_id]]
+        
+        if num_tasks is not None:
+            problems = problems[:num_tasks]
 
         samples = []
         outputs = []
@@ -68,9 +72,12 @@ class JSONEval:
         else:
             problem["prompt"][0]['content'] = f"{problem['prompt'][0]['content']}\nOnly output JSON.\nJSON:\n"
 
-        prompt = syncode.model.tokenizer.apply_chat_template(problem["prompt"], tokenize = False)
+        if syncode.model.tokenizer.chat_template is not None:
+            prompt = syncode.model.tokenizer.apply_chat_template(problem["prompt"], tokenize = False)
+        else:
+            prompt = problem["prompt"][0]['content']
 
-        batch_completions = syncode.model.generate_batch_completion_grammar(prompt, num_samples_per_task)
+        batch_completions = syncode.model.generate_grammar_constrained_completion(prompt, num_samples_per_task)
         for completion_id, completion in enumerate(batch_completions):
             result = dict(
                     task_id = task_id, 

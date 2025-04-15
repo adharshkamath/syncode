@@ -48,27 +48,30 @@ Define your own grammar using simple EBNF syntax. Check out our [notebooks direc
 | 🎲 Sample with any existing decoding strategy (eg. greedy, beam search, nucleus sampling)                           |
 
 
-## 📖 More About **SynCode**
-
-### How **SynCode** works?
-
-<img width="750" alt="Screenshot 2024-03-21 at 2 22 15 AM" src="https://github.com/uiuc-focal-lab/syncode/assets/14147610/d9d73072-3c9b-47d4-a941-69d5cf8fb1bf">
-
-In the SynCode workflow, the LLM takes partial code _C<sub>k</sub>_ and generates a distribution for the next token _t<sub>k+1</sub>_. The incremental parser processes _C<sub>k</sub>_ to generate accept sequences _A_, the sequences of terminals that can follow partial code called accept sequences. Simultaneously, the incremental parser computes a remainder _r_ from the partial code, representing the suffix that may change its terminal type in subsequent generations. The backbone of SynCode is the offline construction of a DFA mask store, a lookup table derived from regular expressions representing the terminals of the language grammar. The DFA mask store facilitates efficient traversal of DFA states, enabling the retrieval of masks mapped to each state and accept sequence. SynCode walks over the DFA using the remainder and uses the mask store to compute the mask specific to each accept sequence. By unifying masks for each accept sequence SynCode gets the set of syntactically valid tokens. The LLM iteratively generates a token _t<sub>k+1</sub>_ using the distribution and the mask, appending it to _C<sub>k</sub>_ to create the updated code _C<sub>k+1</sub>_. The process continues until the LLM returns the final code _C<sub>n</sub>_ based on the defined stop condition.
-
 ## 🚀 Quick Start
 ### Python Installation and Usage Instructions
-Simply install SynCode via PyPi using the following command:
-``` bash
-pip install git+https://github.com/uiuc-focal-lab/syncode.git
+
+You can install SynCode via PyPI:
+
+```bash
+pip install syncode
 ```
 
-Note: SynCode depends on HuggingFace [transformers](https://github.com/huggingface/transformers):
-| SynCode version | Recommended transformers version |
-| -------------- | -------------------------------- |
-| `v0.1.4` (latest) | `v4.44.0`                         |
-| `v0.1.2`          | `v4.42.0`                         |
+Alternatively, you can install the latest development version directly from GitHub:
 
+```bash
+pip install git+https://github.com/structuredllm/syncode.git
+```
+
+#### Version Compatibility
+
+SynCode depends on HuggingFace [transformers](https://github.com/huggingface/transformers):
+
+| SynCode version | Required transformers version | Python version |
+| -------------- | ----------------------------- | -------------- |
+| `v0.4.12` (latest) | `v4.51.0`                    | 3.6 - 3.12     |
+
+**Note:** Python 3.13 is not currently supported due to dependency constraints.
 
 ### Usage option 1:
 SynCode can be used as a simple logit processor with HuggingFace [transformers](https://github.com/huggingface/transformers) library interface. Check this [notebook](./notebooks/example_logits_processor.ipynb) for example.
@@ -148,6 +151,20 @@ print(f"SynCode output:\n{output}")
 Check more examples of using Python, Go, and other grammars in <a href="#-example-usage">Notebooks</a> and a quick example at 
 &nbsp; [<img align="center" src="https://colab.research.google.com/assets/colab-badge.svg" />](https://colab.research.google.com/drive/1rYm8iehx_qYdtgWmqLkmhIjizhUVTb9E?usp=sharing)
 
+#### Instuct-tuned Models
+SynCode can also be used with Instruct-tuned models. For example, the following code snippet shows how to use SynCode with the Instruct-tuned LLM model.
+
+``` python
+messages = [
+    {"role": "system", "content": "You are a chatbot who always returns a JSON object."},
+    {"role": "user", "content": "can you give me a JSON object describing University of Illinois at Urbana-Champaign?"},
+]
+
+out = syn_llm.infer(messages)
+```
+
+ See the [notebook](./notebooks/example_instruct_model.ipynb) for example.
+
 ### Environment Variables
 Optionally, you can set the directories for cache by exporting the following environment variables. Add the following lines to your .bashrc or .zshrc file:
 ```
@@ -179,8 +196,6 @@ export HF_ACCESS_TOKEN="your_huggingface_api_key"
 - `dataset` (str, optional): Dataset. Defaults to "input". "input" indicates that the user can provide input via CLI or by passing in a prompt as a string. 
    
 - `num_few_shot` (int, optional): Number of examples for few-shot prompting. Defaults to 0.
-    
-- `chat_mode` (bool, optional): True if using a Chat/Instruct LLM. False otherwise. Defaults to False. 
   
 - `dev_mode` (bool, optional): Development mode where we do not fail silently with parser errors. Defaults to False.
   
@@ -192,6 +207,7 @@ export HF_ACCESS_TOKEN="your_huggingface_api_key"
 
 - `task_id` (int, optional): Problem task id for selecting a problem from a Dataset.
 
+- `device_map` (str, optional): Device map for the model. Defaults to None.
 - `kwargs`(void, optional): Currently supported `kwargs` are `max_length`, `max_new_tokens`, `min_length`, `min_new_tokens`, `early_stopping`, `do_sample`, `num_beams`, `use_cache`, `temperature`, `top_k`, `top_p`, `num_return_sequences`, `pad_token_id`, and `eos_token_id`. Refer to the [HuggingFace Text Generation Documentation](https://huggingface.co/docs/transformers/en/main_classes/text_generation) for more information.
 
   
@@ -203,7 +219,7 @@ export HF_ACCESS_TOKEN="your_huggingface_api_key"
 
 Clone this repository:
 ```
-git clone https://github.com/uiuc-focal-lab/syncode.git
+git clone https://github.com/structuredllm/syncode.git
 ```
 
 To run the tool with CLI, use the following command:
@@ -217,12 +233,12 @@ python3 syncode/infer.py
     --dataset [mbxp, humaneval, mathqa-x, input]
     --few_shot [True, False]
     --num_fs_examples [num_fs_examples]
-    --chat_mode [True, False]
     --dev_mode [True, False]
     --log_level [0, 1, 2]
     --new_mask_store [True, False]
     --parser ["lr", "lalr"]
     --task_id [task_id]
+    --device_map [device_map]
 ```
 </details>
 
@@ -375,6 +391,32 @@ print(f"Syncode augmented LLM output:\n{output}")
 ```
 &nbsp;
 
+
+
+## 📜 Citation
+<p>
+    <a href="https://arxiv.org/abs/2403.01632"><img src="https://img.shields.io/badge/Paper-arXiv-blue"></a>
+</p>
+
+```
+@misc{ugare2024syncode,
+      title={SynCode: LLM Generation with Grammar Augmentation}, 
+      author={Shubham Ugare and Tarun Suresh and Hangoo Kang and Sasa Misailovic and Gagandeep Singh},
+      year={2024},
+      eprint={2403.01632},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
+}
+```
+
+## 📖 More About **SynCode**
+
+### How **SynCode** works?
+
+<img width="750" alt="Screenshot 2024-03-21 at 2 22 15 AM" src="https://github.com/uiuc-focal-lab/syncode/assets/14147610/d9d73072-3c9b-47d4-a941-69d5cf8fb1bf">
+
+In the SynCode workflow, the LLM takes partial code _C<sub>k</sub>_ and generates a distribution for the next token _t<sub>k+1</sub>_. The incremental parser processes _C<sub>k</sub>_ to generate accept sequences _A_, the sequences of terminals that can follow partial code called accept sequences. Simultaneously, the incremental parser computes a remainder _r_ from the partial code, representing the suffix that may change its terminal type in subsequent generations. The backbone of SynCode is the offline construction of a DFA mask store, a lookup table derived from regular expressions representing the terminals of the language grammar. The DFA mask store facilitates efficient traversal of DFA states, enabling the retrieval of masks mapped to each state and accept sequence. SynCode walks over the DFA using the remainder and uses the mask store to compute the mask specific to each accept sequence. By unifying masks for each accept sequence SynCode gets the set of syntactically valid tokens. The LLM iteratively generates a token _t<sub>k+1</sub>_ using the distribution and the mask, appending it to _C<sub>k</sub>_ to create the updated code _C<sub>k+1</sub>_. The process continues until the LLM returns the final code _C<sub>n</sub>_ based on the defined stop condition.
+
 ## How Does **SynCode** Compare to Other Constrained Decoders?
 
 
@@ -398,22 +440,6 @@ print(f"Syncode augmented LLM output:\n{output}")
 
 [test-img]: https://github.com/shubhamugare/llm-cfg/actions/workflows/run_tests.yml/badge.svg
 [tests]: https://github.com/shubhamugare/llm-cfg/actions/workflows/run_tests.yml
-
-## 📜 Citation
-<p>
-    <a href="https://arxiv.org/abs/2403.01632"><img src="https://img.shields.io/badge/Paper-arXiv-blue"></a>
-</p>
-
-```
-@misc{ugare2024syncode,
-      title={SynCode: LLM Generation with Grammar Augmentation}, 
-      author={Shubham Ugare and Tarun Suresh and Hangoo Kang and Sasa Misailovic and Gagandeep Singh},
-      year={2024},
-      eprint={2403.01632},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG}
-}
-```
 
 ## Contact
 For questions, please contact [Shubham Ugare](mailto:shubhamdugare@gmail.com).
