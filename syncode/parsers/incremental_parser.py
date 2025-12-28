@@ -136,12 +136,12 @@ class IncrementalParser:
         Returns the set of acceptable terminals at the current partial code position.
         """
         # Stores the sequence of tokens that the parser has seen in the order  
-        interactive = self.interactive
         lexer_tokens, lexing_incomplete = self._lex_code(partial_code)
-        self.next_ac_terminals = self._accepts(interactive)
+        self.next_ac_terminals = self._accepts(self.interactive)
 
         # Restore the previous state of the parser
         self._restore_recent_parser_state(lexer_tokens)
+        interactive = self.interactive
 
         # Parse the tokens
         self.time_accepts = 0
@@ -166,9 +166,20 @@ class IncrementalParser:
             self._handle_parsing_error(lexer_tokens, token, e)
 
         # Compute current terminal string
-        remainder_state, current_term_str, final_terminal = self._get_remainder(partial_code, lexing_incomplete=lexing_incomplete, parse_incomplete=parse_incomplete)            
+        remainder_state, current_term_str, final_terminal = self._get_remainder(
+            partial_code, 
+            lexing_incomplete=lexing_incomplete, 
+            parse_incomplete=parse_incomplete
+            )            
         
-        return ParseResult.from_accept_terminals(self.cur_ac_terminals, self.next_ac_terminals, current_term_str, remainder_state, final_terminal=final_terminal, ignore_terminals=self.base_parser.lexer_conf.ignore)
+        return ParseResult.from_accept_terminals(
+            self.cur_ac_terminals, 
+            self.next_ac_terminals, 
+            current_term_str, 
+            remainder_state, 
+            final_terminal=final_terminal, 
+            ignore_terminals=self.base_parser.lexer_conf.ignore)
+
 
     def _get_remainder(self, code, lexing_incomplete=False, parse_incomplete=False):
         final_terminal = None

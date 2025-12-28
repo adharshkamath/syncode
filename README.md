@@ -44,7 +44,7 @@ Define your own grammar using simple EBNF syntax. Check out our [notebooks direc
 | 🔥 Fast grammar-guided generation (as little as 10% generation overhead with Python and Go!)                        |
 | 🤖 Seamlessly work with any HuggingFace Language Model, including Code, Chat, and Instruct models                   |
 | 🖍️ Pass in any CFG in the EBNF format (even large grammars for programming languages like Python and Go!)            |
-| 📝 Built-in CFGs for **Python, Go, SQL, Math, JSON**, and more!                                                              |
+| 📝 Built-in CFGs for **Python, Go, Java, SQL, Math, JSON**, and more!                                                              |
 | 🎲 Sample with any existing decoding strategy (eg. greedy, beam search, nucleus sampling)                           |
 
 
@@ -69,7 +69,7 @@ SynCode depends on HuggingFace [transformers](https://github.com/huggingface/tra
 
 | SynCode version | Required transformers version | Python version |
 | -------------- | ----------------------------- | -------------- |
-| `v0.4.12` (latest) | `v4.51.0`                    | 3.6 - 3.12     |
+| `v0.4.16` (latest) | `v4.53.2`                    | 3.6 - 3.12     |
 
 **Note:** Python 3.13 is not currently supported due to dependency constraints.
 
@@ -148,7 +148,7 @@ print(f"SynCode output:\n{output}")
 # }
 ```
 
-Check more examples of using Python, Go, and other grammars in <a href="#-example-usage">Notebooks</a> and a quick example at 
+Check more examples of using Python, Go, Java and other grammars in <a href="#-example-usage">Notebooks</a> and a quick example at 
 &nbsp; [<img align="center" src="https://colab.research.google.com/assets/colab-badge.svg" />](https://colab.research.google.com/drive/1rYm8iehx_qYdtgWmqLkmhIjizhUVTb9E?usp=sharing)
 
 #### Instuct-tuned Models

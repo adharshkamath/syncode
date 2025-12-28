@@ -35,12 +35,12 @@ class PythonIncrementalParser(IncrementalParser):
         return tab_len
 
     def get_acceptable_next_terminals(self, partial_code) -> ParseResult:
-        # Stores the sequence of tokens that the parser has seen in the order  
-        interactive = self.interactive
         lexer_tokens, lexing_incomplete = self._lex_code(partial_code)
+        self.next_ac_terminals = self._accepts(self.interactive)
 
         # Restore the previous state of the parser
         self._restore_recent_parser_state(lexer_tokens)
+        interactive = self.interactive
         
         next_ac_indents = None
 
@@ -85,7 +85,11 @@ class PythonIncrementalParser(IncrementalParser):
         remainder_state, final_terminal = None, None
         
         # Compute current terminal string
-        remainder_state, current_term_str, final_terminal = self._get_remainder(partial_code, lexing_incomplete=lexing_incomplete, parse_incomplete=parse_incomplete)  
+        remainder_state, current_term_str, final_terminal = self._get_remainder(
+            partial_code, 
+            lexing_incomplete=lexing_incomplete, 
+            parse_incomplete=parse_incomplete
+            )  
         
         cur_ac_terminals = self.cur_ac_terminals
         next_ac_terminals = self.next_ac_terminals
@@ -93,7 +97,9 @@ class PythonIncrementalParser(IncrementalParser):
 
         if remainder_state == RemainderState.MAYBE_COMPLETE or remainder_state == RemainderState.COMPLETE:
             if len(self.parsed_lexer_tokens) > 0 and self.parsed_lexer_tokens[-1].type == '_NL':
+                # Calculate the last indetation level
                 last_indent_str = self.parsed_lexer_tokens[-1].value.split('\n')[-1]
+                
                 last_indent = last_indent_str.count(' ') + last_indent_str.count('\t') * self.tab_len
                 next_ac_indents = [indent-last_indent for indent in self.indent_level if indent >= last_indent]
 

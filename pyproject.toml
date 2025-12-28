@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "syncode"
-version="0.4.12"
+version="0.4.16"
 requires-python = ">=3.6,<3.13"
 description = "Grammar-guided code generation tool"
 readme = "README.md"
@@ -24,7 +24,7 @@ dependencies = [
     "regex==2024.11.6",
     "torch",
     "tqdm",
-    "transformers==4.51.3",
+    "transformers==4.53.2",
     "datasets",
     "jsonschema",
 ]
